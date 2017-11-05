@@ -1,0 +1,117 @@
+.slide-window {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    top: 0px;
+    left: 0px;
+}
+
+.slide-left,
+.slide-right {
+    font: 8em "Georgia", "Apple Symbols", serif;
+    margin-top: -10px;
+    line-height: 0;
+    position: absolute;
+    top: 50%;
+    cursor: pointer;
+    color: #70C041;
+    opacity: 0.1;
+    transition: all 0.66s ease;
+    -webkit-transition: all 0.66s ease;
+}
+
+.slide-left {
+    left: 3%;
+}
+
+.slide-right {
+    right: 3%;
+}
+
+.slides {
+    height: 100%;
+    position: absolute;
+    margin: 0px;
+    padding: 0px;
+    -webkit-transform: translate3d(0px, 0px, 0px);
+    transform: translate3d(0px, 0px, 0px);
+    transition: all 0.66s ease;
+    -webkit-transition: all 0.66s ease;
+}
+
+.slides-nav {
+    font: 2em "Georgia", "Apple Symbols", serif;
+    line-height: 0;
+    position: absolute;
+    bottom: 10%;
+    width: 100%;
+    text-align: center;
+    display: table;
+    transition: all 0.66s ease;
+    -webkit-transition: all 0.66s ease;
+}
+
+.slides-nav>span {
+    cursor: pointer;
+    color: #70C041;
+    opacity: 0.1;
+}
+
+.slides-nav>span.selected {
+    opacity: 1;
+}
+
+.slide {
+    list-style: none;
+    position: relative;
+    float: left;
+    margin: 0;
+    padding: 0;
+    width: 500px;
+    height: 100%;
+    text-align: center;
+    display: table;
+    background: black;
+    background-size: cover;
+    background-position: 50% 50%;
+    color: #fff;
+    transform: translate3d(0px, 0px, 0px);
+    -webkit-transform: translate3d(0px, 0px, 0px);
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+}
+
+.slide-container {
+    position: relative;
+    display: table-cell;
+    vertical-align: middle
+}
+
+.slide-header {
+    font: 2em "Georgia", "Apple Symbols", serif;
+    position: absolute;
+    text-align: center;
+    width: 100%;
+    display: table;
+    color: #70C041;
+    top: 10%;
+    vertical-align: middle
+}
+
+.slide-footer {
+
+    font: 2em "Georgia", "Apple Symbols", serif;
+    position: absolute;
+    text-align: center;
+    width: 100%;
+    display: table;
+    color: #70C041;
+    bottom: 10%;
+    vertical-align: middle;
+    left: 0px;
+}
+
+.alive {
+    visibility: visible;
+}
