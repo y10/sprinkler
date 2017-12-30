@@ -8,8 +8,8 @@
 #include <WebSocketsServer.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-#include <Ticker.h>
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson 
+#include <Ticker.h>
 #include <fauxmoESP.h>
 #include "sprinkler.h"
 #include "sprinkler-http.h"
