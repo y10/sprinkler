@@ -88,6 +88,8 @@ public:
            (String)(times) + "," +
            "\"timer\":" +
            (String)(startTime ? (duration ? duration - (millis() - startTime) + (pauseTime ? (millis() - pauseTime) : 0) : 0) : 0) + "," +
+           " \"on\": " + 
+           (String)(startTime ? "1" : "0") + "," +
            "\"started\":" +
            (String)(startTime ? "true" : "false") + "," +
            "\"paused\":" +

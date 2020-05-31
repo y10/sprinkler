@@ -229,6 +229,12 @@ public:
       respondRestartRequest(request);
     });
 
+    server.on("/api/on", HTTP_GET, [&](AsyncWebServerRequest *request){
+      respondStartRequest(request);
+    });
+    server.on("/api/off", HTTP_GET, [&](AsyncWebServerRequest *request){
+      respondStopRequest(request);
+    });
     server.on("/api/state", HTTP_GET, [&](AsyncWebServerRequest *request){
       respondStateRequest(request);
     });

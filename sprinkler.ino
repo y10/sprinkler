@@ -1,28 +1,19 @@
-#include <FS.h>                   //this needs to be first, or it all crashes and burns...
+#define ESP8266
+
+#include <FS.h> //this needs to be first, or it all crashes and burns...
 #include <DNSServer.h>
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
-#include <ESPAsyncTCP.h>
+#include <ESP8266WiFi.h> //https://github.com/esp8266/Arduino
 #include <ESPAsyncWebServer.h>
-#include <ESPAsyncWiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <ESPAsyncWiFiManager.h> //https://github.com/tzapu/WiFiManager
 #include <ESP8266mDNS.h>
-#include <WebSocketsServer.h>
-#include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-#include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson 
 #include <Ticker.h>
 #include <fauxmoESP.h>
 #include "sprinkler.h"
+#include "sprinkler-device-sonoff.h"
 #include "sprinkler-http.h"
 #include "sprinkler-wss.h"
 #include "sprinkler-time.h"
-
-/************ Defines ******************/
-
-#define RELAY_1 13
-#define RELAY_2 12
-#define LED 16
-#define BTN1 2
-#define BTN2 0
 
 /************ Global State ******************/
 DNSServer dns;
@@ -34,146 +25,98 @@ Ticker ticker;
 SprinklerHttp httpSprinkler;
 SprinklerWss wssSprinkler;
 
-char relay1_name[50] = "Sprinkler";
-
-//flag for saving data
-bool shouldSaveConfig = false;
+char relay_name[50] = "Sprinkler";
 
 /*************************** Sketch Code ************************************/
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
 
   Serial.print("\n[MAIN] Reset reason: ");
   Serial.println(ESP.getResetReason());
 
-  //set led pin as output
-  pinMode(LED, OUTPUT);
-
-  //attach reset handler
-  pinMode(BTN1, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BTN1), reset, CHANGE);
-
-  // set relay as outputs
-  pinMode(RELAY_1, OUTPUT);
-
-  Sprinkler.onTurnOn(turnOn);
-  Sprinkler.onTurnOff(turnOff);
+  setupDevice();
 
   ticker.attach(0.6, tick);
-  setupSPIFFS();
   setupWifi();
   setupOTA();
-   //save the custom parameters to FS
-  if (shouldSaveConfig) {
-    saveConfig();  
-    //end save
-  }
   setupAlexa();
-  setupTime();  
+  setupTime();
   setupHttp();
   ticker.detach();
-  
+
   Serial.println("[MAIN] System started.");
 }
 
-void loop() {
+void loop()
+{
   ArduinoOTA.handle();
   fauxmo.handle();
   Alarm.delay(0);
 }
 
-void reset() {
-  Serial.println("[MAIN] Factory reset requested.");
-  
-  wifiManager.resetSettings();
-  SPIFFS.format();
-  system_restart();
+void setupDevice()
+{
+  Device.setup();
+  Device.getDeviceName(relay_name, 49);
 
-  delay(5000);
+  Sprinkler.onTurnOn([&]() {
+    Device.turnOn();
+  });
+  Sprinkler.onTurnOff([&]() {
+    Device.turnOff();
+  });
 }
 
-void turnOn() {
-  digitalWrite(RELAY_1, HIGH);
-}
+void setupWifi()
+{
 
-void turnOff() {
-  digitalWrite(RELAY_1, LOW);
-}
+  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+  wifiManager.setAPCallback([](AsyncWiFiManager *myWiFiManager)
+  {
+    Serial.println("[MAIN] Entered config mode");
+    Serial.println(WiFi.softAPIP());
+    //if you used auto generated SSID, print it
+    Serial.println(myWiFiManager->getConfigPortalSSID());
+    //entered config mode, make led toggle faster
+    ticker.attach(0.2, tick);
+  });
 
-void setupSPIFFS()  {
+  //set config save notify callback
+  wifiManager.setSaveConfigCallback([]() {
+    Device.requestSave();
+  });
 
-  //read configuration from FS json
-  Serial.println("[MAIN] Mounting FS...");
-  
-  if (SPIFFS.begin()) {
-    Serial.println("[MAIN] mounted file system");
-    if (SPIFFS.exists("/config.json")) {
-      //file exists, reading and loading
-      Serial.println("[MAIN] reading config file");
-      File configFile = SPIFFS.open("/config.json", "r");
-      if (configFile) {
-        Serial.println("[MAIN] opened config file");
-        size_t size = configFile.size();
-        // Allocate a buffer to store contents of the file..0
+  // The extra parameters to be configured (can be either global or just in the setup)
+  // After connecting, parameter.getValue() will get you the configured value
+  // id/name placeholder/prompt default length
+  AsyncWiFiManagerParameter custom_relay_name("relay_name", "Name", relay_name, 50);
 
-        std::unique_ptr<char[]> buf(new char[size]);
+  //add all your parameters here
+  wifiManager.addParameter(&custom_relay_name);
 
-        configFile.readBytes(buf.get(), size);
-        DynamicJsonBuffer jsonBuffer;
-        JsonObject& json = jsonBuffer.parseObject(buf.get());
-        json.printTo(Serial);
-        if (json.success()) {
-          Serial.println("\n[MAIN] parsed json");
+  wifiManager.setConfigPortalTimeout(300); // wait 5 minutes for Wifi config and then return
 
-          strcpy(relay1_name, json["relay1_name"]);
+  String hostname("Sprinkler-");
+  hostname += String(ESP.getChipId(), HEX);
 
-        } else {
-          Serial.println("\n[MAIN] failed to load json config");
-        }
-      }
-    }
-  } else {
-    Serial.println("[MAIN] failed to mount FS");
+  if (!wifiManager.autoConnect(hostname.c_str()))
+  {
+    Serial.println("[MAIN] failed to connect and hit timeout");
+    ESP.reset();
   }
 
-  //end read
-}
+  //if you get here you have connected to the WiFi
+  Serial.println("[MAIN] connected to Wifi");
 
-void setupWifi() {
-
-   //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
-   wifiManager.setAPCallback(configModeCallback);
-   //set config save notify callback
-   wifiManager.setSaveConfigCallback(saveConfigCallback);
- 
-   // The extra parameters to be configured (can be either global or just in the setup)
-   // After connecting, parameter.getValue() will get you the configured value
-   // id/name placeholder/prompt default length
-   AsyncWiFiManagerParameter  custom_relay1_name("relay1_name", "Name", relay1_name, sizeof(relay1_name) - 1);
- 
-   //add all your parameters here
-   wifiManager.addParameter(&custom_relay1_name);
- 
-   wifiManager.setConfigPortalTimeout(300); // wait 5 minutes for Wifi config and then return
-
-   String hostname("Sprinkler-");
-   hostname += String(ESP.getChipId(), HEX);
-   hostname += "-ED";
-  
-   if (!wifiManager.autoConnect(hostname.c_str())) {
-     Serial.println("[MAIN] failed to connect and hit timeout");
-     ESP.reset();
-   }
- 
-   //if you get here you have connected to the WiFi
-   Serial.println("[MAIN] connected to Wifi");
- 
   //read updated parameters
-  strcpy(relay1_name, custom_relay1_name.getValue());  
+  strcpy(relay_name, custom_relay_name.getValue());
+  Device.setDeviceName(custom_relay_name.getValue());
 }
 
-void setupOTA() {
+void setupOTA()
+{
   Serial.println("[MAIN] Setup OTA");
   // OTA
   // An important note: make sure that your project setting of Flash size is at least double of size of the compiled program. Otherwise OTA fails on out-of-memory.
@@ -189,41 +132,29 @@ void setupOTA() {
   ArduinoOTA.onError([](ota_error_t error) {
     char errormsg[100];
     sprintf(errormsg, "OTA: Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) strcpy(errormsg + strlen(errormsg), "Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) strcpy(errormsg + strlen(errormsg), "Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) strcpy(errormsg + strlen(errormsg), "Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) strcpy(errormsg + strlen(errormsg), "Receive Failed");
-    else if (error == OTA_END_ERROR) strcpy(errormsg + strlen(errormsg), "End Failed");
+    if (error == OTA_AUTH_ERROR)
+      strcpy(errormsg + strlen(errormsg), "Auth Failed");
+    else if (error == OTA_BEGIN_ERROR)
+      strcpy(errormsg + strlen(errormsg), "Begin Failed");
+    else if (error == OTA_CONNECT_ERROR)
+      strcpy(errormsg + strlen(errormsg), "Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR)
+      strcpy(errormsg + strlen(errormsg), "Receive Failed");
+    else if (error == OTA_END_ERROR)
+      strcpy(errormsg + strlen(errormsg), "End Failed");
     Serial.println(errormsg);
   });
   ArduinoOTA.begin();
 }
 
-void saveConfig()
-{
-  Serial.println("[MAIN] saving config");
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& json = jsonBuffer.createObject();
-  json["relay1_name"] = relay1_name;
-
-  File configFile = SPIFFS.open("/config.json", "w");
-  if (!configFile) {
-    Serial.println("[MAIN] failed to open config file for writing");
-  }
-
-  json.printTo(Serial);
-  Serial.println();
-  json.printTo(configFile);
-  configFile.close();
-}
-
 void setupAlexa()
 {
   // Setup Alexa devices
-  if ((sizeof(relay1_name) - 1) > 0)  {
-    fauxmo.addDevice(relay1_name);
+  if (sizeof(relay_name) > 1)
+  {
+    fauxmo.addDevice(relay_name);
     Serial.print("[MAIN] Added alexa device: ");
-    Serial.println(relay1_name);
+    Serial.println(relay_name);
   }
 
   fauxmo.onSet([](unsigned char device_id, const char *device_name, bool state) {
@@ -242,8 +173,8 @@ void setupTime()
 {
   // sync time
   Serial.println("[MAIN] Setup time synchronization");
-  setSyncProvider([](){return NTP.getTime();});
-  setSyncInterval(3600);  
+  setSyncProvider([]() { return NTP.getTime(); });
+  setSyncInterval(3600);
 }
 
 void setupHttp()
@@ -253,28 +184,12 @@ void setupHttp()
   httpSprinkler.setup(httpServer);
   wssSprinkler.setup(webSocket);
   httpServer.addHandler(&webSocket);
-  httpServer.begin();  
+  httpServer.begin();
 }
 
 void tick()
 {
   //toggle state
-  int state = digitalRead(LED);  // get the current state of GPIO pin
-  digitalWrite(LED, !state);     // set pin to the opposite state
-}
-
-//callback notifying us of the need to save config
-void saveConfigCallback () {
-  Serial.println("[MAIN] Should save config");
-  shouldSaveConfig = true;
-}
-
-//gets called when WiFiManager enters configuration mode
-void configModeCallback (AsyncWiFiManager *myWiFiManager) {
-  Serial.println("[MAIN] Entered config mode");
-  Serial.println(WiFi.softAPIP());
-  //if you used auto generated SSID, print it
-  Serial.println(myWiFiManager->getConfigPortalSSID());
-  //entered config mode, make led toggle faster
-  ticker.attach(0.2, tick);
+  int state = digitalRead(LED_PIN); // get the current state of GPIO pin
+  digitalWrite(LED_PIN, !state);    // set pin to the opposite state
 }
