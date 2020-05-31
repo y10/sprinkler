@@ -96,10 +96,7 @@ void setupWifi()
 
   wifiManager.setConfigPortalTimeout(300); // wait 5 minutes for Wifi config and then return
 
-  String hostname("Sprinkler-");
-  hostname += String(ESP.getChipId(), HEX);
-
-  if (!wifiManager.autoConnect(hostname.c_str()))
+  if (!wifiManager.autoConnect(Device.hostname().c_str()))
   {
     Serial.println("[MAIN] failed to connect and hit timeout");
     ESP.reset();
@@ -138,6 +135,7 @@ void setupOTA()
       strcpy(errormsg + strlen(errormsg), "End Failed");
     Serial.println(errormsg);
   });
+  ArduinoOTA.setHostname(Device.hostname().c_str());
   ArduinoOTA.begin();
 }
 

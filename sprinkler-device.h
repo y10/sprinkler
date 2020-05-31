@@ -140,6 +140,15 @@ public:
     Serial.println("[MAIN] Restarting...");
     system_restart();
   }
+  
+  String toJSON()
+  {
+    return (String) "{" +
+    "\r\n  \"disp_name\": \"" + disp_name + "\"" +
+    "\r\n ,\"host_name\": \"" + host_name + "\"" +
+    "\r\n ,\"upds_addr\": \"" + upds_addr + "\"" +
+    "\r\n}";
+  }
 };
 
 #endif

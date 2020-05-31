@@ -2,10 +2,12 @@
 #define SPRINKLER_WEBSERVER_H
 
 #include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h> 
 #include <Time.h>
 #include <TimeLib.h>
 #include <TimeAlarms.h>
 #include "Sprinkler.h"
+#include "Sprinkler-ota.h"
 #include "Sprinkler.html.h"
 #include "Sprinkler.icon.h"
 
@@ -149,6 +151,10 @@ private:
     respondScheduleStateRequest(day, request);
   }
 
+  void respondSettingsRequest(AsyncWebServerRequest *request)
+  {
+    request->send(200, "application/json", Device.toJSON());
+  }
 
   void respond404Request(AsyncWebServerRequest *request)
   {
@@ -227,6 +233,63 @@ public:
     });
     server.on("/restart", HTTP_GET, [&](AsyncWebServerRequest *request) {
       respondRestartRequest(request);
+    });
+
+    server.on("/api/settings", HTTP_GET, [&](AsyncWebServerRequest *request) {
+      respondSettingsRequest(request);
+    });
+
+    server.on("/api/settings", HTTP_POST, [&](AsyncWebServerRequest *request) {
+      respondSettingsRequest(request);
+      }, NULL, [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+      
+      DynamicJsonBuffer jsonBuffer;
+      JsonObject &json = jsonBuffer.parseObject(data, len);
+      if (json.success())
+      {
+        bool restart = false;
+
+        if(json.containsKey("disp_name"))
+        {
+          String disp_name = json["disp_name"]; 
+          Device.dispname(disp_name.c_str());
+          Device.save();
+          restart = true;
+        }
+
+        if(json.containsKey("upds_addr"))
+        {
+          String upds_addr = json["upds_addr"]; 
+          Device.updsaddr(upds_addr.c_str());
+          Device.save();
+        }
+
+        if (restart)
+        {
+          Device.restart();
+        }
+      }
+    });
+
+    server.on("/update", HTTP_POST, [&](AsyncWebServerRequest *request) {
+      respondSettingsRequest(request);
+    }, NULL, [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+      
+      DynamicJsonBuffer jsonBuffer;
+      JsonObject &json = jsonBuffer.parseObject(data, len);
+      if (json.success())
+      {
+        if(json.containsKey("upds_addr"))
+        {
+          String upds_addr = json["upds_addr"]; 
+          Device.updsaddr(upds_addr.c_str());
+          Device.save();
+        }
+      }
+
+      String url = Device.updsaddr();
+      Log.printf("[Firmware] Updating from %s\n", url.c_str());
+      OTA.update(url);
     });
 
     server.on("/api/on", HTTP_GET, [&](AsyncWebServerRequest *request){

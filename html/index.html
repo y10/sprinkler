@@ -16,11 +16,19 @@
     <link rel="stylesheet" type="text/css" href="./css/slider.css">
     <link rel="stylesheet" type="text/css" href="./css/switch.css">
     
-    <style>
+    <style> 
+        html,
+        body {
+            padding: 0px;
+            margin: 0px;
+            border: 0px;
+        }
+
         body::-webkit-scrollbar {
             display: none;
             background: black;
         }
+
 
         table,
         button,
@@ -181,6 +189,117 @@
             -webkit-transform: rotate(45deg) translate(-8px, -8px);
             transform: rotate(45deg) translate(-8px, -8px);
         }
+
+           /* Progress Bar */
+           #progress {
+            position: absolute;
+            z-index: 1000;
+            height: 4px;
+            display: block;
+            width: 100%;
+            background-color: #70C041;
+            background-clip: padding-box;
+            overflow: hidden;
+            display: none;
+        }
+
+        #progress .indeterminate {
+            background-color: #26a69a;
+        }
+
+        #progress .indeterminate:before {
+            content: '';
+            position: absolute;
+            background-color: inherit;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            will-change: left, right;
+            -webkit-animation: indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+            animation: indeterminate 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+        }
+
+        #progress .indeterminate:after {
+            content: '';
+            position: absolute;
+            background-color: inherit;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            will-change: left, right;
+            -webkit-animation: indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+            animation: indeterminate-short 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+            -webkit-animation-delay: 1.15s;
+            animation-delay: 1.15s;
+        }
+
+        @-webkit-keyframes indeterminate {
+            0% {
+                left: -35%;
+                right: 100%;
+            }
+
+            60% {
+                left: 100%;
+                right: -90%;
+            }
+
+            100% {
+                left: 100%;
+                right: -90%;
+            }
+        }
+
+        @keyframes indeterminate {
+            0% {
+                left: -35%;
+                right: 100%;
+            }
+
+            60% {
+                left: 100%;
+                right: -90%;
+            }
+
+            100% {
+                left: 100%;
+                right: -90%;
+            }
+        }
+
+        @-webkit-keyframes indeterminate-short {
+            0% {
+                left: -200%;
+                right: 100%;
+            }
+
+            60% {
+                left: 107%;
+                right: -8%;
+            }
+
+            100% {
+                left: 107%;
+                right: -8%;
+            }
+        }
+
+        @keyframes indeterminate-short {
+            0% {
+                left: -200%;
+                right: 100%;
+            }
+
+            60% {
+                left: 107%;
+                right: -8%;
+            }
+
+            100% {
+                left: 107%;
+                right: -8%;
+            }
+        }
     </style>   
     <script src="./js/slider.js"></script>
     <script src="./js/services/wss-service.js"></script>
@@ -189,6 +308,7 @@
     <script src="./js/modules/switch-module.js"></script>   
     <script src="./js/modules/timer-module.js"></script>   
     <script src="./js/modules/zones-module.js"></script>     
+    <script src="./js/modules/config.js"></script>     
     <script>
         function Toggle(menu) {
 
@@ -204,9 +324,22 @@
             }
         }
 
+        
+        function Reload(delay) {
+            document.getElementById("progress").style.display = "block";
+            setTimeout(function () {
+                window.location.reload();
+            }, delay);
+        }
+
         function loadSwitch(el)
         {
             app.modules.main.load(el);
+        }
+
+        function loadConfig(el) 
+        {
+            app.modules.config.load(el);
         }
 
         function loadTimer(el)
@@ -227,6 +360,9 @@
 </head>
 
 <body>
+    <div id="progress">
+        <div class="indeterminate"></div>
+    </div>
 
     <div id="svgContainer" style="display:none">
         <svg width='50' height='50' fill="#70C041" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -406,6 +542,7 @@
             <li onload="loadSwitch(this)"></li>
             <li onload="loadTimer(this)"></li>
             <li onload="loadZones(this)"></li>
+            <li onload="loadConfig(this)"></li>
         </ol>
 
         <div class="slides-nav"></div>

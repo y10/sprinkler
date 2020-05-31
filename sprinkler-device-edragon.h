@@ -12,7 +12,7 @@ extern SprinklerDevice Device = SprinklerDevice([]()
 {
     pinMode(LED_PIN, OUTPUT);
 
-    pinMode(BTN_PIN, INPUT_PULLDOWN_16);
+    pinMode(BTN_PIN, INPUT);
 
     pinMode(RELAY_PIN, OUTPUT);
 
@@ -20,13 +20,13 @@ extern SprinklerDevice Device = SprinklerDevice([]()
     {
         if (Sprinkler.isWatering())
         {
-        Sprinkler.stop();
+            Sprinkler.stop();
         }
         else
         {
-        Sprinkler.start();
+            Sprinkler.start();
         }
-    }, CHANGE);
+    }, FALLING);
 });
 
 #endif
