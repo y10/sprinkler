@@ -7,6 +7,26 @@
 
 #include "sprinkler-device.h"
 
-extern SprinklerDevice Device = SprinklerDevice(RELAY_PIN, LED_PIN, BTN_PIN);
+extern SprinklerDevice Device = SprinklerDevice([]()
+{
+    pinMode(LED_PIN, OUTPUT);
+
+    pinMode(BTN_PIN, INPUT_PULLDOWN_16);
+
+    pinMode(RELAY_PIN, OUTPUT);
+
+    attachInterrupt(digitalPinToInterrupt(BTN_PIN), []() 
+    {
+        if (Sprinkler.isWatering())
+        {
+        Sprinkler.stop();
+        }
+        else
+        {
+        Sprinkler.start();
+        }
+    }, CHANGE);
+    
+});
 
 #endif

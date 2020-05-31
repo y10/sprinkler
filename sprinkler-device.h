@@ -1,148 +1,127 @@
 #ifndef SPRINKLER_DEVICE_H
 #define SPRINKLER_DEVICE_H
 
-#include <FS.h>
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <ESPAsyncWiFiManager.h>
-#include <ArduinoJson.h> //https://github.com/bblanchon/ArduinoJson
+#include <EEPROM.h>
 #include "sprinkler.h"
+
+#define EEPROM_SIZE 1024
+
+struct SprinklerConfig {
+  uint8_t version;
+  char disp_name[50];
+  char upds_addr[50];
+};
 
 class SprinklerDevice
 {
 private:
-  char device_name[50];
-  bool shouldSaveConfig;
+  std::function<void()> onSetup;
 
-protected:
-  unsigned int _RELAY;
-  unsigned int _LED;
-  unsigned int _BTN;
+  String host_name;
+  String disp_name;
+  String safe_name;
+  String upds_addr;
 
 public:
-  SprinklerDevice(int relay, int led, int btn) : 
-  _RELAY(relay), 
-  _LED(led), 
-  _BTN(btn), 
-   shouldSaveConfig(false), 
-   device_name{'S', 'p', 'r', 'i', 'n', 'k', 'l', 'e', 'r'}
+  SprinklerDevice(std::function<void(void)> onSetupCallback) : onSetup(onSetupCallback)
   {
+    disp_name = "Sprinkler";
+    safe_name = "sprinkler";
+    host_name = "sprinkler-" + String(ESP.getChipId(), HEX);
+    upds_addr = "http://ota.voights.net/sprinkler.bin";
   }
 
-  void requestSave()
-  {
-    shouldSaveConfig = true;
+   const String hostname() const {
+    return host_name;
   }
 
-  const char *getDeviceName() const
-  {
-    return device_name;
+  const String dispname() const {
+    return disp_name;
   }
 
-  char *getDeviceName(char *str, size_t len)
-  {
-    if (device_name)
+  const String safename() const{
+    return safe_name;
+  }
+
+  bool dispname(const char* name){
+    bool changed = false;
+    if (strlen(name) > 0)
     {
-      strncpy(str, device_name, len);
+      if (!disp_name.equals(name))
+      {
+        disp_name = name;
+        changed = true;
+      }
+      if (!safe_name.equals(disp_name))
+      {
+        safe_name = name;
+        safe_name.replace(" ", "_");
+        safe_name.toLowerCase();
+        changed = true;
+      }
     }
-    return str;
+
+    return changed;
   }
 
-  bool setDeviceName(const char *value)
-  {
-    if (value && sizeof(value) > 1 && strcmp(device_name, value) != 0)
-    {
-      strncpy(device_name, value, 49);
+  const String updsaddr() const {
+    return upds_addr;
+  }
 
-      return true;
+  const String updsaddr(const char* addr){
+    upds_addr = addr;
+    
+    if (upds_addr.indexOf("://") == -1)
+    {
+      upds_addr = "http://" + upds_addr;
     }
 
-    return false;
+    return upds_addr;
   }
 
   void setup()
   {
-    pinMode(_LED, OUTPUT);
-
-    pinMode(_BTN, INPUT_PULLUP);
-
-    pinMode(_RELAY, OUTPUT);
-
-    attachInterrupt(digitalPinToInterrupt(_BTN), []() {
-      if (Sprinkler.isWatering())
-      {
-        Sprinkler.stop();
-      }
-      else
-      {
-        Sprinkler.start();
-      }
-    },
-                    CHANGE);
-
+    onSetup();
     load();
-
-    if (shouldSaveConfig)
-    {
-      save();
-    }
   }
 
   void load()
   {
-    //read configuration from FS json
-    Serial.println("[SETTINGS] mounting FS...");
-
-    if (SPIFFS.begin())
+    Serial.println("[EEPROM] reading...");
+    EEPROM.begin(EEPROM_SIZE);
+    SprinklerConfig config;
+    EEPROM.get(0, config);
+    if(config.version == 1) 
     {
-      Serial.println("[SETTINGS] mounted file system");
-      if (SPIFFS.exists("/config.json"))
-      {
-        //file exists, reading and loading
-        Serial.println("[SETTINGS] reading config file");
-        File configFile = SPIFFS.open("/config.json", "r");
-        if (configFile)
-        {
-          Serial.println("[SETTINGS] opened config file");
-          size_t size = configFile.size();
-          // Allocate a buffer to store contents of the file..0
-
-          std::unique_ptr<char[]> buf(new char[size]);
-
-          configFile.readBytes(buf.get(), size);
-          DynamicJsonBuffer jsonBuffer;
-          JsonObject &json = jsonBuffer.parseObject(buf.get());
-          json.printTo(Serial);
-          if (json.success())
-          {
-            Serial.println("[SETTINGS] parsed json");
-            strcpy(device_name, json["relay_name"]);
-            Serial.print("[SETTINGS] device_name ");
-            Serial.println(device_name);
-          }
-          else
-          {
-            Serial.println("[SETTINGS] failed to load json config");
-          }
-        }
-      }
+        dispname(config.disp_name);
+        updsaddr(config.upds_addr);
     }
     else
     {
-      Serial.println("[SETTINGS] failed to mount FS");
+      Serial.println("[EEPROM] not found.");
     }
+  }
+
+  void save()
+  {
+    Serial.println("[EEPROM] saving");
+    SprinklerConfig config = {1, 0, 0};
+    strcpy(config.disp_name, disp_name.c_str());
+    strcpy(config.upds_addr, upds_addr.c_str());
+    EEPROM.put(0, config);
+    EEPROM.commit();
   }
 
   void turnOn()
   {
-    digitalWrite(_LED, LOW);
-    digitalWrite(_RELAY, HIGH);
+    digitalWrite(LED_PIN, LOW);
+    digitalWrite(RELAY_PIN, HIGH);
   }
 
   void turnOff()
   {
-    digitalWrite(_LED, HIGH);
-    digitalWrite(_RELAY, LOW);
+    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(RELAY_PIN, LOW);
   }
 
   virtual void reset()
@@ -160,24 +139,6 @@ public:
   {
     Serial.println("[MAIN] Restarting...");
     system_restart();
-  }
-
-  void save()
-  {
-    Serial.println("[MAIN] saving config");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &json = jsonBuffer.createObject();
-    json["relay_name"] = device_name;
-
-    File configFile = SPIFFS.open("/config.json", "w");
-    if (!configFile)
-    {
-      Serial.println("[MAIN] failed to open config file for writing");
-    }
-
-    json.printTo(Serial);
-    json.printTo(configFile);
-    configFile.close();
   }
 };
 

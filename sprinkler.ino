@@ -25,8 +25,6 @@ Ticker ticker;
 SprinklerHttp httpSprinkler;
 SprinklerWss wssSprinkler;
 
-char relay_name[50] = "Sprinkler";
-
 /*************************** Sketch Code ************************************/
 
 void setup()
@@ -59,7 +57,6 @@ void loop()
 void setupDevice()
 {
   Device.setup();
-  Device.getDeviceName(relay_name, 49);
 
   Sprinkler.onTurnOn([&]() {
     Device.turnOn();
@@ -71,6 +68,10 @@ void setupDevice()
 
 void setupWifi()
 {
+  // The extra parameters to be configured (can be either global or just in the setup)
+  // After connecting, parameter.getValue() will get you the configured value
+  // id/name placeholder/prompt default length
+  static AsyncWiFiManagerParameter custom_relay_name("relay_name", "Name", Device.dispname().c_str(), 50);
 
   //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   wifiManager.setAPCallback([](AsyncWiFiManager *myWiFiManager)
@@ -85,14 +86,11 @@ void setupWifi()
 
   //set config save notify callback
   wifiManager.setSaveConfigCallback([]() {
-    Device.requestSave();
+    Device.dispname(custom_relay_name.getValue());
+    Device.save();
   });
 
-  // The extra parameters to be configured (can be either global or just in the setup)
-  // After connecting, parameter.getValue() will get you the configured value
-  // id/name placeholder/prompt default length
-  AsyncWiFiManagerParameter custom_relay_name("relay_name", "Name", relay_name, 50);
-
+  
   //add all your parameters here
   wifiManager.addParameter(&custom_relay_name);
 
@@ -109,10 +107,6 @@ void setupWifi()
 
   //if you get here you have connected to the WiFi
   Serial.println("[MAIN] connected to Wifi");
-
-  //read updated parameters
-  strcpy(relay_name, custom_relay_name.getValue());
-  Device.setDeviceName(custom_relay_name.getValue());
 }
 
 void setupOTA()
@@ -150,11 +144,11 @@ void setupOTA()
 void setupAlexa()
 {
   // Setup Alexa devices
-  if (sizeof(relay_name) > 1)
+  if (Device.dispname().length() > 0)
   {
-    fauxmo.addDevice(relay_name);
+    fauxmo.addDevice(Device.dispname().c_str());
     Serial.print("[MAIN] Added alexa device: ");
-    Serial.println(relay_name);
+    Serial.println(Device.dispname());
   }
 
   fauxmo.onSet([](unsigned char device_id, const char *device_name, bool state) {
