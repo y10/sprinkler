@@ -165,8 +165,8 @@ void setupTime()
 {
   // sync time
   Serial.println("[MAIN] Setup time synchronization");
-  setSyncProvider([]() { return NTP.getTime(); });
-  setSyncInterval(3600);
+
+  NTP.setup();
 }
 
 void setupHttp()
