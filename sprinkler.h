@@ -2,6 +2,7 @@
 #define SPRINKLER_H
 
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <Ticker.h>
 #include <TimeAlarms.h>
 #include <vector>
@@ -259,15 +260,26 @@ public:
     }
   }
 
-  void restart()
+  virtual void reset()
   {
-    Device.restart();
+    Serial.println("[MAIN] Factory reset requested.");
+    Serial.println("[EEPROM] clear");
+    for (int i = 0 ; i < EEPROM.length() ; i++) {
+      EEPROM.write(i, 0);
+    }
+    EEPROM.commit();
+
+    WiFi.disconnect(true);
+    ESP.restart();
+
+    delay(5000);
   }
 
-  void reset()
+  virtual void restart()
   {
-    Device.reset();
-  }  
+    Serial.println("[MAIN] Restarting...");
+    ESP.restart();
+  }
 };
 
 extern SprinklerClass Sprinkler = SprinklerClass();

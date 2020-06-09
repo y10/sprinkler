@@ -7,7 +7,8 @@ app.modules.timer = (function (http) {
         load: function (el) {
             function createButton() {
                 var btn = document.createElement('button');
-
+                btn.style.border = "none";
+                
                 btn.redraw = function (state) {
                     btn.innerText = state.timer
                         ? Math.floor(state.timer / 60000) + ":" + ("0" + Math.floor((state.timer % 60000) / 1000)).slice(-2)
