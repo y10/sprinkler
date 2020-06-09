@@ -560,7 +560,7 @@
             pages = new Slider(document.getElementById("pages"));
             settings = new Slider(document.getElementById("settings"));
             
-            Http.getScript("https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js", true, function(){
+            Http.import("https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js", true, function(){
                 pages.attachSwipeHandlers();
                 settings.attachSwipeHandlers();
             });
