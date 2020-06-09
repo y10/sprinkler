@@ -164,7 +164,7 @@ void setupAlexa()
 void setupTime()
 {
   // sync time
-  Serial.println("[MAIN] Setup time synchronization");
+  Serial.println("[MAIN] Setup time.");
 
   NTP.setup();
 }

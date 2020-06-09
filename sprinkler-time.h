@@ -19,25 +19,27 @@ public:
   void setup()
   {
     configTime(60*60*NTP_TIMEZONE, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
-
+    Serial.print("[NTP] Connecting server");
     int tryCount = 0;
-    while (tryCount++ < 6)
+    while (tryCount++ < 20) // wait for 5 seconds
     {
       delay(250);
-
+      Serial.print(".");
       if(time(nullptr) > 100000) 
       {
         break;
       }
     }
-    
-    time_t t = time(nullptr);
-    if (t)
+    Serial.println(".");
+
+    setSyncProvider([]()
     {
-      setTime(t);
+      time_t t = time(nullptr);
       Serial.print("[TIME] ");
-      Serial.println((String)day() + " " + (String)monthShortStr(month()) + " " + (String)year() + " " + (String)hour() + ":" + (String)minute());
-    }
+      Serial.println((String)day(t) + " " + (String)monthShortStr(month(t)) + " " + (String)year(t) + " " + (String)hour(t) + ":" + (String)minute(t));
+
+      return t;
+    });
   }
 };
 
