@@ -261,16 +261,12 @@ public:
 
   void restart()
   {
-    Serial.println("[MAIN] Restarting...");
-    system_restart();
+    Device.restart();
   }
 
   void reset()
   {
-    Serial.println("[MAIN] Factory reset...");
-    WiFi.disconnect(true);
-    SPIFFS.format();
-    system_restart();
+    Device.reset();
   }  
 };
 

@@ -111,6 +111,15 @@ public:
     EEPROM.put(0, config);
     EEPROM.commit();
   }
+  
+  void clear()
+  {
+    Serial.println("[EEPROM] clear");
+    for (int i = 0 ; i < EEPROM.length() ; i++) {
+      EEPROM.write(i, 0);
+    }
+    EEPROM.commit();
+  }
 
   void turnOn()
   {
@@ -128,9 +137,10 @@ public:
   {
     Serial.println("[MAIN] Factory reset requested.");
 
+    clear();
+
     WiFi.disconnect(true);
-    SPIFFS.format();
-    system_restart();
+    ESP.restart();
 
     delay(5000);
   }
@@ -138,7 +148,7 @@ public:
   virtual void restart()
   {
     Serial.println("[MAIN] Restarting...");
-    system_restart();
+    ESP.restart();
   }
   
   String toJSON()
