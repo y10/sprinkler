@@ -8,19 +8,9 @@
 #include <vector>
 #include <functional>
 #include "schedule.h"
+#include "sprinkler-device.h"
 
 typedef std::function<void()> Delegate;
-
-void startSprinkler();
-void startNextSprinklerZone();
-void startSprinklerEveryday();
-void startSprinklerMonday();
-void startSprinklerTuesday();
-void startSprinklerWednesday();
-void startSprinklerThursday();
-void startSprinklerFriday();
-void startSprinklerSaturday();
-void startSprinklerSunday();
 
 class SprinklerClass
 {
@@ -28,6 +18,7 @@ private:
 
   std::vector<Delegate> onChangeEventHandlers;
   
+  SprinklerDevice* device;
   Delegate onAction;
   Delegate offAction;
   
@@ -45,24 +36,87 @@ private:
     }
   }
 
+  void handle(ScheduleClass& sdk)
+  {
+    duration = sdk.getDuration() * 1000 * 60;
+
+    times = 5;
+
+    start();
+  }
+
+  void everydayHandler()
+  {
+    handle(Schedule);
+  }
+
+  void mondayHandler()
+  {
+    handle(Schedule.Mon);
+  }
+
+  void tuesdayHandler()
+  {
+    handle(Schedule.Tue);
+  }
+
+  void wednsdayHandler()
+  {
+    handle(Schedule.Wed);
+  }
+
+  void thursdayHandler()
+  {
+    handle(Schedule.Thu);
+  }
+
+  void fridayHandler()
+  {
+    handle(Schedule.Fri);
+  }
+
+  void saturdayHandler()
+  {
+    handle(Schedule.Sat);
+  }
+
+  void sundayHandler()
+  {
+    handle(Schedule.Sun);
+  }
+
 public:
+
   SprinklerClass() : times(0), duration(0), startTime(0), pauseTime(0)
   {
+    Schedule.set(std::bind(&SprinklerClass::everydayHandler, this));
+    Schedule.Sun.set(std::bind(&SprinklerClass::sundayHandler, this));
+    Schedule.Mon.set(std::bind(&SprinklerClass::mondayHandler, this));
+    Schedule.Tue.set(std::bind(&SprinklerClass::tuesdayHandler, this));
+    Schedule.Wed.set(std::bind(&SprinklerClass::wednsdayHandler, this));
+    Schedule.Thu.set(std::bind(&SprinklerClass::thursdayHandler, this));
+    Schedule.Fri.set(std::bind(&SprinklerClass::fridayHandler, this));
+    Schedule.Sat.set(std::bind(&SprinklerClass::saturdayHandler, this));
+  }
+
+  void setup(SprinklerDevice& d)
+  {
+    d.load();
+
+    onAction = [&]() {
+      d.turnOn();
+    };
+
+    offAction = [&]() {
+      d.turnOff();
+    };
+
+    device = &d;
   }
 
   void onChange(Delegate event)
   {
     onChangeEventHandlers.push_back(event);
-  }
-
-  void onTurnOn(Delegate onCallback)
-  {
-    onAction = onCallback;
-  }
-
-  void onTurnOff(Delegate offCallback)
-  {
-    offAction = offCallback;
   }
 
   unsigned int getDuration()
@@ -100,21 +154,6 @@ public:
            "\r\n}";
   }
 
-  void startEveryday()
-  {
-    duration = Schedule.getDuration() * 1000 * 60;
-    times = 5;
-    start();
-  }
-
-  void startDay(timeDayOfWeek_t day)
-  {
-    ScheduleClass &skd = Schedule.get(day);
-    duration = skd.getDuration() * 1000 * 60;
-    times = 5;
-    start();
-  }
-
   bool isWatering()
   {
     return startTime ? true : false;
@@ -122,13 +161,13 @@ public:
 
   void start()
   {
-    if (duration)
-      countdown.once_ms(duration - 10000, startNextSprinklerZone);
+     if (duration)
+      countdown.once_ms(duration - 10000, std::bind(&SprinklerClass::startNextZone, this));
 
     onAction();
     startTime = millis();
     pauseTime = 0;
-    notify();  
+    notify();   
   }
 
   void startNextZone()
@@ -143,7 +182,7 @@ public:
       if (times)
       {
         offAction();
-        countdown.once(10, startSprinkler);
+        countdown.once(10, std::bind(&SprinklerClass::start, this));
       }
       else
       {
@@ -201,37 +240,18 @@ public:
 
       if (duration != -1)
         skd.setDuration(duration);
-
-      if (enable == 1)
+      
+      if (enable != -1)
       {
-        switch (day)
+        if (enable == 1)
         {
-        case dowMonday:
-          skd.enable(startSprinklerMonday);
-          break;
-        case dowTuesday:
-          skd.enable(startSprinklerTuesday);
-          break;
-        case dowWednesday:
-          skd.enable(startSprinklerWednesday);
-          break;
-        case dowThursday:
-          skd.enable(startSprinklerThursday);
-          break;
-        case dowFriday:
-          skd.enable(startSprinklerFriday);
-          break;
-        case dowSaturday:
-          skd.enable(startSprinklerSaturday);
-          break;
-        case dowSunday:
-          skd.enable(startSprinklerSunday);
-          break;
+          skd.enable();
         }
-      }
-      else if (enable == 0)
-      {
-        skd.disable();
+        else
+        {
+          skd.disable();
+        }
+        if (device) device->save();
       }
     }
   }
@@ -249,89 +269,32 @@ public:
       if (duration != -1)
         Schedule.setDuration(duration);
 
-      if (enable == 1)
+      if (enable != -1)
       {
-        Schedule.enable(startSprinklerEveryday);
-      }
-      else if (enable == 0)
-      {
-        Schedule.disable();
+        if (enable == 1)
+        {
+          Schedule.enable();
+        }
+        else
+        {
+          Schedule.disable();
+        }
+        if (device) device->save();
       }
     }
   }
 
   virtual void reset()
   {
-    Serial.println("[MAIN] Factory reset requested.");
-    Serial.println("[EEPROM] clear");
-    for (int i = 0 ; i < EEPROM.length() ; i++) {
-      EEPROM.write(i, 0);
-    }
-    EEPROM.commit();
-
-    WiFi.disconnect(true);
-    ESP.restart();
-
-    delay(5000);
+    if (device) device->reset();
   }
 
   virtual void restart()
   {
-    Serial.println("[MAIN] Restarting...");
-    ESP.restart();
+    if (device) device->restart();
   }
 };
 
 extern SprinklerClass Sprinkler = SprinklerClass();
-
-void startSprinkler()
-{
-  Sprinkler.start();
-}
-
-void startNextSprinklerZone()
-{
-  Sprinkler.startNextZone();
-}
-
-void startSprinklerEveryday()
-{
-  Sprinkler.startEveryday();
-}
-
-void startSprinklerMonday()
-{
-  Sprinkler.startDay(dowMonday);
-}
-
-void startSprinklerTuesday()
-{
-  Sprinkler.startDay(dowTuesday);
-}
-
-void startSprinklerWednesday()
-{
-  Sprinkler.startDay(dowWednesday);
-}
-
-void startSprinklerThursday()
-{
-  Sprinkler.startDay(dowThursday);
-}
-
-void startSprinklerFriday()
-{
-  Sprinkler.startDay(dowFriday);
-}
-
-void startSprinklerSaturday()
-{
-  Sprinkler.startDay(dowSaturday);
-}
-
-void startSprinklerSunday()
-{
-  Sprinkler.startDay(dowSunday);
-}
 
 #endif

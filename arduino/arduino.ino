@@ -34,13 +34,14 @@ void setup()
   Serial.print("\n[MAIN] Reset reason: ");
   Serial.println(ESP.getResetReason());
 
-  setupDevice();
+  Device.setup();
 
   ticker.attach(0.6, tick);
   setupWifi();
+  setupTime();
+  setupDevice();
   setupOTA();
   setupAlexa();
-  setupTime();
   setupHttp();
   ticker.detach();
 
@@ -56,14 +57,7 @@ void loop()
 
 void setupDevice()
 {
-  Device.setup();
-
-  Sprinkler.onTurnOn([&]() {
-    Device.turnOn();
-  });
-  Sprinkler.onTurnOff([&]() {
-    Device.turnOff();
-  });
+  Sprinkler.setup(Device);
 }
 
 void setupWifi()

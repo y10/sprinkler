@@ -11,12 +11,18 @@ class ScheduleClass
 protected:
   unsigned int Duration;
   AlarmID_t AlarmID;
+  OnTick_t OnTick;
   time_t Time;
 
 public:
   ScheduleClass()
       : Time(0), Duration(0), AlarmID(dtINVALID_ALARM_ID)
   {
+  }
+
+  void set(OnTick_t func) 
+  {
+    OnTick = func;
   }
 
   bool isEnabled()
@@ -33,7 +39,7 @@ public:
     }
   }
 
-  virtual bool enable(OnTick_t func) = 0;
+  virtual bool enable() = 0;
 
   unsigned int getDuration()
   {
@@ -106,11 +112,11 @@ public:
   {
   }
 
-  bool enable(OnTick_t func) override
+  bool enable() override
   {
     disable();
 
-    AlarmID = Alarm.alarmRepeat(Day, hour(Time), minute(Time), 0, func);
+    AlarmID = Alarm.alarmRepeat(Day, hour(Time), minute(Time), 0, OnTick);
 
     return Alarm.isAllocated(AlarmID);
   }
@@ -140,7 +146,7 @@ public:
   {
   }
 
-  bool enable(OnTick_t func) override
+  bool enable() override
   {
     for (int day = (int)dowSunday; day <= (int)dowSaturday; day++)
     {
@@ -153,7 +159,7 @@ public:
 
     disable();
 
-    AlarmID = Alarm.alarmRepeat(hour(Time), minute(Time), 0, func);
+    AlarmID = Alarm.alarmRepeat(hour(Time), minute(Time), 0, OnTick);
 
     return Alarm.isAllocated(AlarmID);
   }

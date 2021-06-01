@@ -128,7 +128,6 @@ private:
 
   void respondScheduleRequest(AsyncWebServerRequest *request)
   {
-
     Sprinkler.schedule(
         request->hasArg("h") ? request->arg("h").toInt() : -1,
         request->hasArg("m") ? request->arg("m").toInt() : -1,
@@ -175,7 +174,7 @@ private:
       Serial.printf("OPTIONS");
     else
       Serial.printf("UNKNOWN");
-    Serial.printf(" http://%s%s\n", request->host().c_str(), request->url().c_str());
+      Serial.printf("http://%s%s\n", request->host().c_str(), request->url().c_str());
 
     if(request->contentLength()){
       Serial.printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());

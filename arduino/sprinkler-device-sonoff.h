@@ -27,6 +27,6 @@ extern SprinklerDevice Device = SprinklerDevice([]()
         }
     }, FALLING);
     
-});
+}, LED_PIN, RELAY_PIN);
 
 #endif

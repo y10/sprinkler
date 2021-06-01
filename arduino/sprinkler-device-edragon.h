@@ -27,6 +27,7 @@ extern SprinklerDevice Device = SprinklerDevice([]()
             Sprinkler.start();
         }
     }, FALLING);
-});
+    
+}, LED_PIN, RELAY_PIN);
 
 #endif
