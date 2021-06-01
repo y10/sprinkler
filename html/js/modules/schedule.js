@@ -94,6 +94,7 @@ app.modules.schedule = (function (http) {
                         http.get('/api/schedule' + (day ? "/" + day : "") + "?h=" + select.getValue(), function (state) {
 
                             select.render(state);
+                            swtch.render(state);
 
                             select.disabled = false;
                         });
@@ -151,7 +152,8 @@ app.modules.schedule = (function (http) {
                         http.get('/api/schedule' + (day ? "/" + day : "") + "?m=" + select.getValue(), function (state) {
 
                             select.render(state);
-
+                            swtch.render(state);
+                            
                             select.disabled = false;
 
                         });
