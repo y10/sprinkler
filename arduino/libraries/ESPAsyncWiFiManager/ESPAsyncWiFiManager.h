@@ -9,14 +9,12 @@
  * Licensed under MIT license
  **************************************************************/
 
-#ifndef SPRINKLER_WIFI_MNG_H
-#define SPRINKLER_WIFI_MNG_H
+#ifndef ESPAsyncWiFiManager_H
+#define ESPAsyncWiFiManager_H
 
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
 #include <memory>
-
-#include "../../includes/files.h"
 
 typedef enum {
     WM_CONNECT_FAILED   = 0,
@@ -27,15 +25,17 @@ typedef enum {
 class AsyncWiFiManager
 {
 public:
+    typedef std::function<AsyncWebServerResponse*(AsyncWebServerRequest *request)> OnHandleRequest;
+
     AsyncWiFiManager();
         
     wm_status_t autoConnect();
     wm_status_t autoConnect(char const *apName);
     wm_status_t autoConnect(char const *apName, char const *apPasswd);
 
-    String  getDeviceName();
-    String  getFriendlyName();
-    String  setFriendlyName(char const *name);
+    void    onHandleRootRequest(OnHandleRequest handler){ onRootRequestHandler = handler; }
+    void    onHandlePostRequest(OnHandleRequest handler){ onPostRequestHandler = handler; }
+    void    onHandleInfoRequest(OnHandleRequest handler){ onInfoRequestHandler = handler; }
 
     String  getSSID();
     String  getPassword();
@@ -48,7 +48,7 @@ public:
     //usefully for devices that failed to connect at some point and got stuck in a webserver loop
     //in seconds
     void    setTimeout(unsigned long seconds);
-    void    setDebugOutput(boolean debug);
+    void    setDebugOutput(boolean enable);
 
     //sets a custom ip /gateway /subnet configuration
     void    setAPConfig(IPAddress ip, IPAddress gw, IPAddress sn);
@@ -66,9 +66,8 @@ private:
     void    begin(char const *apName, char const *apPasswd);
     
     int         _eepromStart;
-    String      _chip = "no-net";
-    String      _name = "";
     const char* _apPasswd = NULL;
+    String      _host = "no-net";
     String      _ssid = "";
     String      _pass = "";
     unsigned long timeout = 0;
@@ -101,9 +100,11 @@ private:
     String toStringIp(IPAddress ip);
 
     boolean connect;
-    boolean _debug = false;
+    boolean debug = false;
 
-    void (*_apcallback)(void) = NULL;
+    OnHandleRequest onRootRequestHandler;
+    OnHandleRequest onPostRequestHandler;
+    OnHandleRequest onInfoRequestHandler;
 
     template <typename Generic>
     void DEBUG_PRINT(Generic text);

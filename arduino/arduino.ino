@@ -12,6 +12,8 @@
 #include "sprinkler-wss.h"
 #include "sprinkler-time.h"
 
+#include "includes/Files.h"
+
 Ticker ticker;
 fauxmoESP fauxmo;
 AsyncWebServer httpServer(80);
@@ -55,16 +57,24 @@ void setupDevice()
 
 void setupWifi()
 {
-  wifiManager.setFriendlyName(Device.dispname().c_str());
   WiFi.setSleepMode(WIFI_NONE_SLEEP);  
   WiFi.hostname(Device.hostname().c_str());
-  
+
+  wifiManager.onHandleRootRequest([](AsyncWebServerRequest *request)->AsyncWebServerResponse*{
+    return request->beginResponse_P(200, "text/html", SKETCH_SETUP_HTML_GZ, sizeof(SKETCH_SETUP_HTML_GZ));
+  });
+  wifiManager.onHandlePostRequest([](AsyncWebServerRequest *request)->AsyncWebServerResponse*{    
+    Device.dispname(Url::decode(request->arg("name").c_str()).c_str());
+    Device.hostname(Url::decode(request->arg("host").c_str()).c_str());
+    return request->beginResponse_P(200, "text/html", SKETCH_STATUS_HTML_GZ, sizeof(SKETCH_STATUS_HTML_GZ));
+  });
+  wifiManager.onHandleInfoRequest([](AsyncWebServerRequest *request)->AsyncWebServerResponse*{
+    return request->beginResponse(200, "application/json", "{ \"name\": \"" + Device.dispname() + "\", \"host\": \"" + Device.hostname() + "\" }");
+  });
   wm_status_t status = wifiManager.autoConnect(Device.hostname().c_str());
   switch (status)
   {
   case WM_FIRST_TIME_CONNECTED:
-      Device.dispname(wifiManager.getFriendlyName().c_str());
-      Device.hostname(wifiManager.getDeviceName().c_str());
       Device.save();
       ESP.reset();
       break;

@@ -12,7 +12,7 @@ async function getwifinetworks() {
 
 async function getinfo() {
     const ir = await Http.json("GET", "info", null, 5000);
-    $('chip').value = ir.chip;
+    $('host').value = ir.host;
     $('name').value = ir.name;
 }
 

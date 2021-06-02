@@ -33,7 +33,7 @@ void AsyncWiFiManager::begin(char const *apName, char const *apPasswd)
   server.reset(new AsyncWebServer(80));
 
   DEBUG_PRINT(F(""));
-  _chip = apName;
+  _host = apName;
   _apPasswd = apPasswd;
   start = millis();
 
@@ -57,11 +57,11 @@ void AsyncWiFiManager::begin(char const *apName, char const *apPasswd)
 
   if (_apPasswd != NULL)
   {
-    WiFi.softAP(_chip, _apPasswd); //password option
+    WiFi.softAP(_host, _apPasswd); //password option
   }
   else
   {
-    WiFi.softAP(_chip);
+    WiFi.softAP(_host);
   }
 
   delay(500); // Without delay I've seen the IP address blank
@@ -112,10 +112,6 @@ wm_status_t AsyncWiFiManager::autoConnect(char const *apName, char const *apPass
   }
 
   WiFi.mode(WIFI_AP);
-  if (_apcallback != NULL)
-  {
-    _apcallback();
-  }
   connect = false;
   begin(apName, apPasswd);
 
@@ -128,9 +124,9 @@ wm_status_t AsyncWiFiManager::autoConnect(char const *apName, char const *apPass
     if (connect)
     {
       delay(2000);
-      DEBUG_PRINT("Connecting to new AP as " + _chip);
+      DEBUG_PRINT("Connecting to new AP as " + _host);
       connect = false;
-      WiFi.hostname(_chip.c_str());
+      WiFi.hostname(_host.c_str());
       connectWifi(_ssid, _pass);
       int s = WiFi.status();
       if (s == WL_CONNECTED)
@@ -183,39 +179,6 @@ String AsyncWiFiManager::getPassword()
     DEBUG_PRINT("Password: " + _pass);
   }
   return _pass;
-}
-
-String AsyncWiFiManager::getDeviceName()
-{
-  if (_chip == "")
-  {
-    DEBUG_PRINT(F("Reading AP name"));
-    _chip = "ESP" + String(ESP.getChipId());
-    DEBUG_PRINT("AP name: " + _chip);
-  }
-  return _chip;
-}
-
-String AsyncWiFiManager::getFriendlyName()
-{
-  if (_name == "")
-  {
-    DEBUG_PRINT(F("Reading Friendly Name"));
-    _name = getDeviceName();
-    DEBUG_PRINT("Friendly Name: " + _name);
-  }
-  return _name;
-}
-
-String AsyncWiFiManager::setFriendlyName(const char * friendlyName)
-{
-  String name = friendlyName;
-  if (name == "")
-  {
-    name = getDeviceName();
-  }
-  _name = name;
-  return _name;
 }
 
 String AsyncWiFiManager::urldecode(const char *src)
@@ -273,9 +236,9 @@ void AsyncWiFiManager::setTimeout(unsigned long seconds)
   timeout = seconds * 1000;
 }
 
-void AsyncWiFiManager::setDebugOutput(boolean debug)
+void AsyncWiFiManager::setDebugOutput(boolean enable)
 {
-  _debug = debug;
+  debug = enable;
 }
 
 void AsyncWiFiManager::setAPConfig(IPAddress ip, IPAddress gw, IPAddress sn)
@@ -293,7 +256,7 @@ void AsyncWiFiManager::handleRoot(AsyncWebServerRequest *request)
     return;
   }
 
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", SKETCH_SETUP_HTML_GZ, sizeof(SKETCH_SETUP_HTML_GZ));
+  AsyncWebServerResponse *response = onRootRequestHandler(request);
   response->addHeader("Content-Encoding", "gzip");
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
@@ -304,7 +267,7 @@ void AsyncWiFiManager::handleRoot(AsyncWebServerRequest *request)
 
 void AsyncWiFiManager::handleHostInfo(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{ \"name\": \"" + _name + "\", \"chip\": \"" + _chip + "\" }");
+  AsyncWebServerResponse *response = onInfoRequestHandler(request);
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
   response->addHeader("Expires", "-1");
@@ -351,13 +314,11 @@ void AsyncWiFiManager::handleRootPost(AsyncWebServerRequest *request)
 {
   DEBUG_PRINT(F("WiFi save"));
 
-  _name = urldecode(request->arg("name").c_str());
-  _chip = urldecode(request->arg("chip").c_str());
+  _host = urldecode(request->arg("host").c_str());
   _ssid = urldecode(request->arg("ssid").c_str());
   _pass = urldecode(request->arg("pass").c_str());
 
-
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", SKETCH_STATUS_HTML_GZ, sizeof(SKETCH_STATUS_HTML_GZ));
+  AsyncWebServerResponse *response = onPostRequestHandler(request);
   response->addHeader("Content-Encoding", "gzip");
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
@@ -424,16 +385,10 @@ boolean AsyncWiFiManager::captivePortal(AsyncWebServerRequest *request)
   return false;
 }
 
-//start up config portal callback
-void AsyncWiFiManager::setAPCallback(void (*func)(void))
-{
-  _apcallback = func;
-}
-
 template <typename Generic>
 void AsyncWiFiManager::DEBUG_PRINT(Generic text)
 {
-  if (_debug)
+  if (debug)
   {
     Serial.print("*WM: ");
     Serial.println(text);

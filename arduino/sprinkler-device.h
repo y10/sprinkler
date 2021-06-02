@@ -6,6 +6,7 @@
 
 #include "schedule.h"
 #include "sprinkler.h"
+#include "includes/Files.h"
 
 #define EEPROM_SIZE 1024
 
