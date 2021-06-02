@@ -1,7 +1,6 @@
 #ifndef SPRINKLER_WSSSERVER_H
 #define SPRINKLER_WSSSERVER_H
 
-#include <WebSocketsServer.h>
 #include <vector>
 #include <algorithm>
 #include <Hash.h>

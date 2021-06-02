@@ -2,6 +2,7 @@
 #define SPRINKLER_DEVICE_H
 
 #include <EEPROM.h>
+#include <ESP8266WiFi.h>
 #include "sprinkler.h"
 #include "schedule.h"
 

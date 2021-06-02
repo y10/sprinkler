@@ -1,19 +1,20 @@
-#pragma once
+#ifndef SPRINKLER_LIB_URL_H
+#define SPRINKLER_LIB_URL_H
 
-struct URL {
+struct Url {
     String value;
     String protocol;
     String host;
     String path;
     uint16_t port;
     
-    URL(const char* url) { init(url); }
-    URL(const String& url) { init(url); }
+    Url(const char* url) { init(url); }
+    Url(const String& url) { init(url); }
 
     void init(String url);
 };
 
-void URL::init(String url) {
+void Url::init(String url) {
 
     this->value = url;
 
@@ -56,5 +57,6 @@ void URL::init(String url) {
     } else {
         this->host = _host;
     }
-
 }
+
+#endif

@@ -1,7 +1,7 @@
-#pragma once
+#ifndef SPRINKLER_OTAUPDATE_H
+#define SPRINKLER_OTAUPDATE_H
 
 #include <ESPAsyncTCP.h>
-#include <ESP8266httpUpdate.h>
 #include "includes\URL.h"
 #include "sprinkler.h"
 
@@ -17,7 +17,7 @@ const char OTA_REQUEST_TEMPLATE[] PROGMEM =
 
 unsigned long _ota_size = 0;
 bool _ota_connected = false;
-URL* _ota_url = nullptr;
+Url* _ota_url = nullptr;
 AsyncClient* _ota_client = nullptr;
 Ticker _ota_ticker;
 
@@ -111,7 +111,7 @@ class SprinklerOTA
 
             if (_ota_url) _ota_url = nullptr;
 
-            _ota_url = new URL(url);
+            _ota_url = new Url(url);
             
             // we only support HTTP
             if ((!_ota_url->protocol.equals("http")) && (!_ota_url->protocol.equals("https"))) {
@@ -145,3 +145,5 @@ class SprinklerOTA
 };
 
 extern SprinklerOTA OTA = SprinklerOTA();
+
+#endif

@@ -1,4 +1,5 @@
-function Slider(el) {
+
+export function Slider(el) {
     var slider = this;
 
     var sliderWindow = el;
@@ -154,3 +155,5 @@ function Slider(el) {
 
     window.addEventListener("resize", resize);
 }
+
+window.Slider = Slider;

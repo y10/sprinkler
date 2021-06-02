@@ -1,10 +1,7 @@
-#define ESP8266
-
-#include <FS.h> //this needs to be first, or it all crashes and burns...
 #include <DNSServer.h>
 #include <ESP8266WiFi.h> //https://github.com/esp8266/Arduino
 #include <ESPAsyncWebServer.h>
-#include <ESPAsyncWiFiManager.h> //https://github.com/tzapu/WiFiManager
+#include <ESPAsyncWiFiManager.h> 
 #include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 #include <Ticker.h>
@@ -15,17 +12,13 @@
 #include "sprinkler-wss.h"
 #include "sprinkler-time.h"
 
-/************ Global State ******************/
-DNSServer dns;
+Ticker ticker;
+fauxmoESP fauxmo;
 AsyncWebServer httpServer(80);
 AsyncWebSocket webSocket("/ws");
-AsyncWiFiManager wifiManager(&httpServer, &dns);
-fauxmoESP fauxmo;
-Ticker ticker;
+AsyncWiFiManager wifiManager;
 SprinklerHttp httpSprinkler;
 SprinklerWss wssSprinkler;
-
-/*************************** Sketch Code ************************************/
 
 void setup()
 {
@@ -62,42 +55,22 @@ void setupDevice()
 
 void setupWifi()
 {
-  // The extra parameters to be configured (can be either global or just in the setup)
-  // After connecting, parameter.getValue() will get you the configured value
-  // id/name placeholder/prompt default length
-  static AsyncWiFiManagerParameter custom_relay_name("relay_name", "Name", Device.dispname().c_str(), 50);
-
-  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
-  wifiManager.setAPCallback([](AsyncWiFiManager *myWiFiManager)
-  {
-    Serial.println("[MAIN] Entered config mode");
-    Serial.println(WiFi.softAPIP());
-    //if you used auto generated SSID, print it
-    Serial.println(myWiFiManager->getConfigPortalSSID());
-    //entered config mode, make led toggle faster
-    ticker.attach(0.2, tick);
-  });
-
-  //set config save notify callback
-  wifiManager.setSaveConfigCallback([]() {
-    Device.dispname(custom_relay_name.getValue());
-    Device.save();
-  });
-
+  wifiManager.setFriendlyName(Device.dispname().c_str());
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);  
+  WiFi.hostname(Device.hostname().c_str());
   
-  //add all your parameters here
-  wifiManager.addParameter(&custom_relay_name);
-
-  wifiManager.setConfigPortalTimeout(300); // wait 5 minutes for Wifi config and then return
-
-  if (!wifiManager.autoConnect(Device.hostname().c_str()))
+  wm_status_t status = wifiManager.autoConnect(Device.hostname().c_str());
+  switch (status)
   {
-    Serial.println("[MAIN] failed to connect and hit timeout");
-    ESP.reset();
+  case WM_FIRST_TIME_CONNECTED:
+      Device.dispname(wifiManager.getFriendlyName().c_str());
+      Device.save();
+      ESP.reset();
+      break;
+  case WM_CONNECT_FAILED:
+      ESP.reset();
+      return;
   }
-
-  //if you get here you have connected to the WiFi
-  Serial.println("[MAIN] connected to Wifi");
 }
 
 void setupOTA()
@@ -143,15 +116,14 @@ void setupAlexa()
     Serial.println(Device.dispname());
   }
 
-  fauxmo.onSet([](unsigned char device_id, const char *device_name, bool state) {
+  fauxmo.onSet([&](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
     Serial.printf("[MAIN] Set Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
     state ? Sprinkler.start() : Sprinkler.stop();
   });
 
-  fauxmo.onGet([](unsigned char device_id, const char *device_name) {
-    bool state = Sprinkler.isWatering();
+  fauxmo.onGet([&](unsigned char device_id, const char *device_name, bool &state, unsigned char &value) {
+    state = Sprinkler.isWatering();
     Serial.printf("[MAIN] Get Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
-    return state;
   });
 }
 

@@ -3,13 +3,13 @@
 
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h> 
+#include <AsyncJson.h> 
 #include <Time.h>
 #include <TimeLib.h>
 #include <TimeAlarms.h>
 #include "Sprinkler.h"
 #include "Sprinkler-ota.h"
-#include "Sprinkler.html.h"
-#include "Sprinkler.icon.h"
+#include "includes/Files.h"
 
 class SprinklerHttp
 {
@@ -214,13 +214,13 @@ public:
   {
    
     server.on("/", HTTP_GET, [&](AsyncWebServerRequest *request){
-      respondCachedRequest(request, "text/html", SWITCH_INDEX_HTML_GZ, sizeof(SWITCH_INDEX_HTML_GZ));
+      respondCachedRequest(request, "text/html", SKETCH_INDEX_HTML_GZ, sizeof(SKETCH_INDEX_HTML_GZ));
     });
-    server.on("/icon.png", HTTP_GET, [&](AsyncWebServerRequest *request){
-      respondCachedRequest(request, "image/png", SWITCH_ICON_PNG_GZ, sizeof(SWITCH_ICON_PNG_GZ));
+    server.on("/favicon.png", HTTP_GET, [&](AsyncWebServerRequest *request){
+      respondCachedRequest(request, "image/png", SKETCH_FAVICON_PNG_GZ, sizeof(SKETCH_FAVICON_PNG_GZ));
     });
     server.on("/apple-touch-icon.png", HTTP_GET, [&](AsyncWebServerRequest *request){
-      respondCachedRequest(request, "image/png", SWITCH_APPLE_TOUCH_ICON_PNG_GZ, sizeof(SWITCH_APPLE_TOUCH_ICON_PNG_GZ));
+      respondCachedRequest(request, "image/png", SKETCH_APPLE_TOUCH_ICON_PNG_GZ, sizeof(SKETCH_APPLE_TOUCH_ICON_PNG_GZ));
     });
 
     server.on("/manifest.json", HTTP_GET, [&](AsyncWebServerRequest *request){
@@ -238,14 +238,11 @@ public:
       respondSettingsRequest(request);
     });
 
-    server.on("/api/settings", HTTP_POST, [&](AsyncWebServerRequest *request) {
-      respondSettingsRequest(request);
-      }, NULL, [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-      
-      DynamicJsonBuffer jsonBuffer;
-      JsonObject &json = jsonBuffer.parseObject(data, len);
-      if (json.success())
+    server.addHandler(new AsyncCallbackJsonWebHandler("/api/settings", [&](AsyncWebServerRequest *request, JsonVariant &jsonDoc) {      
+      if (jsonDoc)
       {
+        JsonObject json = jsonDoc.as<JsonObject>();
+
         bool restart = false;
 
         if(json.containsKey("disp_name"))
@@ -268,28 +265,7 @@ public:
           Device.restart();
         }
       }
-    });
-
-    server.on("/update", HTTP_POST, [&](AsyncWebServerRequest *request) {
-      respondSettingsRequest(request);
-    }, NULL, [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
-      
-      DynamicJsonBuffer jsonBuffer;
-      JsonObject &json = jsonBuffer.parseObject(data, len);
-      if (json.success())
-      {
-        if(json.containsKey("upds_addr"))
-        {
-          String upds_addr = json["upds_addr"]; 
-          Device.updsaddr(upds_addr.c_str());
-          Device.save();
-        }
-      }
-
-      String url = Device.updsaddr();
-      Log.printf("[Firmware] Updating from %s\n", url.c_str());
-      OTA.update(url);
-    });
+    }));
 
     server.on("/api/on", HTTP_GET, [&](AsyncWebServerRequest *request){
       respondStartRequest(request);
