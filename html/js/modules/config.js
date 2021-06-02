@@ -1,8 +1,11 @@
 import { Http } from "../services/http.prod"
+import { Version, FIRMWARE_URL } from "../config";
 
 if (typeof app.modules === "undefined") { app.modules = {} }
 
 app.modules.config = (function () {
+
+    document.querySelectorAll('#version').forEach(x => x.innerHTML = `v${Version}`);
 
     function createButton(key, name, onclick) {
 
@@ -18,7 +21,6 @@ app.modules.config = (function () {
         return div;
     }
 
-    
     function createSetting(key, type, placeholder, onchange) {
 
         var input = document.createElement("input");
@@ -63,7 +65,7 @@ app.modules.config = (function () {
                 }),
                 createButton("update", "Update", function () {
                     Http.getJson("api/settings").then((settings) => {
-                        var url = prompt("Are you sure you want to update from?", settings['upds_addr'] || "http://ota.voights.net/sprinkler.bin");
+                        var url = prompt("Are you sure you want to update from?", settings['upds_addr'] || FIRMWARE_URL);
                         if (url != null) {
                             document.getElementById("progress").style.display = "block";
                             const data = new FormData();
