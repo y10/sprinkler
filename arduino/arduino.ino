@@ -1,5 +1,5 @@
 #include <DNSServer.h>
-#include <ESP8266WiFi.h> //https://github.com/esp8266/Arduino
+#include <ESP8266WiFi.h> 
 #include <ESPAsyncWebServer.h>
 #include <ESPAsyncWiFiManager.h> 
 #include <ESP8266mDNS.h>
@@ -7,7 +7,7 @@
 #include <Ticker.h>
 #include <fauxmoESP.h>
 #include "sprinkler.h"
-#include "sprinkler-device-sonoff.h"
+#include "sprinkler-device-wemos.h"
 #include "sprinkler-http.h"
 #include "sprinkler-wss.h"
 #include "sprinkler-time.h"
@@ -64,6 +64,7 @@ void setupWifi()
   {
   case WM_FIRST_TIME_CONNECTED:
       Device.dispname(wifiManager.getFriendlyName().c_str());
+      Device.hostname(wifiManager.getDeviceName().c_str());
       Device.save();
       ESP.reset();
       break;
