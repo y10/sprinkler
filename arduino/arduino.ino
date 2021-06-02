@@ -30,9 +30,9 @@ void setup()
   Device.setup();
 
   ticker.attach(0.6, tick);
+  setupDevice();
   setupWifi();
   setupTime();
-  setupDevice();
   setupOTA();
   setupAlexa();
   setupHttp();

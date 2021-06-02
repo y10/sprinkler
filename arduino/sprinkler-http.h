@@ -8,7 +8,9 @@
 #include <TimeLib.h>
 #include <TimeAlarms.h>
 #include "Sprinkler.h"
-#include "Sprinkler-ota.h"
+
+#include "includes/AsyncHTTPUpdateHandler.h"
+#include "includes/AsyncHTTPUpgradeHandler.h"
 #include "includes/Files.h"
 
 class SprinklerHttp
@@ -313,6 +315,10 @@ public:
     server.on("/api/schedule", HTTP_GET, [&](AsyncWebServerRequest *request){
       respondScheduleRequest(request);
     });
+
+    server.addHandler(new AsyncHTTPUpdateHandler("/esp/update", HTTP_POST));
+
+    server.addHandler(new AsyncHTTPUpgradeHandler("/esp/upgrade", HTTP_POST, "https://ota.voights.net/sprinkler.bin"));
 
     server.onNotFound([&](AsyncWebServerRequest *request){
       respond404Request(request);

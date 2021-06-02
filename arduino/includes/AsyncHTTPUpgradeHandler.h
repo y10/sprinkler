@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <ESPAsyncTCP.h>
 #include <Ticker.h>
-#include <WsConsole.h>
 
 #include "StreamString.h"
 #include "Url.h"
@@ -16,8 +15,6 @@ const char OTA_REQUEST_TEMPLATE[] PROGMEM =
     "Connection: close\r\n"
     "Content-Type: application/x-www-form-urlencoded\r\n"
     "Content-Length: 0\r\n\r\n\r\n";
-
-static WsConsole upgrade_console("esp");
 
 class AsyncHTTPUpgradeHandler : public AsyncWebHandler {
  public:
@@ -64,7 +61,8 @@ class AsyncHTTPUpgradeHandler : public AsyncWebHandler {
       return request->beginResponse(400, "text/html", "Upgrade is in progress.");
     }
 
-    String firmwareAddr = request->arg("firmware-addr");
+    String firmwareAddr = request->arg("upds_addr");
+    Serial.println(firmwareAddr);
     if (firmwareAddr.length() != 0) {
       Url url(firmwareAddr);
       if ((!url.protocol.equals("http")) && (!url.protocol.equals("https"))) {
@@ -116,7 +114,7 @@ class AsyncHTTPUpgradeHandler : public AsyncWebHandler {
     client.onDisconnect([](void *obj, AsyncClient *c) { ((AsyncHTTPUpgradeHandler *)(obj))->onClientDisconnect(); },
                         this);
 
-    upgrade_console.printf("Upgrading from: %s\r\n", firmwareUrl.path.c_str());
+    Serial.printf("Upgrading from: %s\r\n", firmwareUrl.path.c_str());
     char buffer[strlen_P(OTA_REQUEST_TEMPLATE) + firmwareUrl.path.length() + firmwareUrl.host.length()];
     snprintf_P(buffer, sizeof(buffer), OTA_REQUEST_TEMPLATE, firmwareUrl.path.c_str(), firmwareUrl.host.c_str());
     client.write(buffer);
@@ -131,7 +129,7 @@ class AsyncHTTPUpgradeHandler : public AsyncWebHandler {
       uint32_t space = ESP.getFreeSketchSpace();
 
       if (!Update.begin((space - 0x1000) & 0xFFFFF000)) {
-        Update.printError(upgrade_console);
+        Update.printError(Serial);
         client.close(true);
         Update.runAsync(false);
         return;
@@ -143,7 +141,7 @@ class AsyncHTTPUpgradeHandler : public AsyncWebHandler {
 
     if (!Update.hasError()) {
       if (Update.write((uint8_t *)p, len) != len) {
-        Update.printError(upgrade_console);
+        Update.printError(Serial);
         client.close(true);
         Update.end();
         return;
@@ -159,16 +157,16 @@ class AsyncHTTPUpgradeHandler : public AsyncWebHandler {
     Serial.println();
 
     if (Update.end(true)) {
-      upgrade_console.printf("Success: %u bytes\r\n", totalSize);
+      Serial.printf("Success: %u bytes\r\n", totalSize);
     } else {
-      Update.printError(upgrade_console);
+      Update.printError(Serial);
     }
 
     connected = false;
   }
 
   void onClientTimeout(uint32_t time) {
-    upgrade_console.println("Timeout");
+    Serial.println("Timeout");
     client.close(true);
   }
 

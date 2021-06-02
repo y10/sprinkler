@@ -1,6 +1,8 @@
+import { Http } from "../services/http.prod"
+
 if (typeof app.modules === "undefined") { app.modules = {} }
 
-app.modules.config = (function (http) {
+app.modules.config = (function () {
 
     function createButton(key, name, onclick) {
 
@@ -51,26 +53,32 @@ app.modules.config = (function (http) {
             var elements = 
             [
                 createSetting("disp_name", "text", "display name", function (value) {
-                    Http.post("/api/settings", { "disp_name": value });
-                    Reload(5000);
+                    Http.postJson("/api/settings", { "disp_name": value }).then(() => {
+                        Reload(5000);
+                    });
                 }),
                 createButton("restart", "Restart", function () {
-                    http.get('/restart');
+                    Http.get('/restart').catch();
                     Reload(5000);
                 }),
                 createButton("update", "Update", function () {
-                    http.get("api/settings", function (settings) {
+                    Http.getJson("api/settings").then((settings) => {
                         var url = prompt("Are you sure you want to update from?", settings['upds_addr'] || "http://ota.voights.net/sprinkler.bin");
                         if (url != null) {
-                            Http.post("/update", { "upds_addr": url }, function () {
-                                Reload(30000);
+                            document.getElementById("progress").style.display = "block";
+                            const data = new FormData();
+                            data.append("upds_addr", url);
+                            Http.post("esp/upgrade", data, 60000).then(function () {
+                                Reload(10000);
+                            }).catch(()=>{
+                                document.getElementById("progress").style.display = "none";
                             });
                         }
                     });
                 }),
                 createButton("reset", "Reset", function () {
                     if (confirm("Are you sure you want to continue?")) {
-                        http.get('/reset');
+                        Http.get('/reset').catch();
                         Reload(5000);
                     }
                 })
@@ -92,7 +100,7 @@ app.modules.config = (function (http) {
             };
     
             element.activate = function () {
-                http.get('/api/settings', function (result) {
+                Http.getJson('/api/settings').then((result) => {
                     element.render(result);
                 });
             };
@@ -101,4 +109,4 @@ app.modules.config = (function (http) {
         }
     };
 
-})(Http);
+})();

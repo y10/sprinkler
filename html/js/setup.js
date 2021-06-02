@@ -1,6 +1,6 @@
 import { Http } from './services/http.prod'
 
-const $ = document.getElementById;
+const $ = (id) => document.getElementById(id);
 
 async function getwifinetworks() {
     const sr = await Http.json("GET", "scan", null, 15000);

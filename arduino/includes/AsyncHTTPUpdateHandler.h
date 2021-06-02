@@ -2,10 +2,7 @@
 #define AsyncHTTPUpdateHandler_H
 
 #include <Arduino.h>
-#include <WsConsole.h>
 #include <Ticker.h>
-
-static WsConsole update_console("esp");
 
 class AsyncHTTPUpdateHandler : public AsyncWebHandler
 {
@@ -38,7 +35,7 @@ protected:
     {
       request->send(200, "text/html", "Restarting...\n");
       ticker.once_ms_scheduled(100, []{
-        update_console.println("Restarting.");
+        Serial.println("Restarting.");
         ESP.restart();
       });
     }
@@ -63,18 +60,18 @@ protected:
 
       if (filename.length() == 0)
       {
-        update_console.println("No file uploaded.");
+        Serial.println("No file uploaded.");
         request->client()->close(true);
         Update.end();
         return;
       }
 
-      update_console.println("Update from file: " + filename);
+      Serial.println("Update from file: " + filename);
       uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
       if (!Update.begin(maxSketchSpace, U_FLASH))
       {
         request->client()->close(true);
-        Update.printError(update_console);
+        Update.printError(Serial);
         Update.end();
         return;
       }
@@ -84,7 +81,7 @@ protected:
     if (Update.write(data, len) != len)
     {
       request->client()->close(true);
-      Update.printError(update_console);
+      Update.printError(Serial);
       Update.end();
       return;
     }
@@ -94,7 +91,7 @@ protected:
       Serial.println();
       if (!Update.end(true))
       {
-        Update.printError(update_console);
+        Update.printError(Serial);
       }
     }
   }

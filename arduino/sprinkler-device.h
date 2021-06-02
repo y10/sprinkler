@@ -39,12 +39,11 @@ class SprinklerDevice {
 
  public:
   SprinklerDevice(std::function<void(void)> onSetupCallback, uint8_t led, uint8_t rel)
-      : onSetup(onSetupCallback), led_pin(led), rel_pin(rel) {
+      : onSetup(onSetupCallback), led_pin(led), rel_pin(rel), revision(1) {
     disp_name = "Sprinkler";
     host_name = "sprinkler-" + String(ESP.getChipId(), HEX);
     full_name = "sprinkler-v" + (String)SKETCH_VERSION_MAJOR + "." + (String)SKETCH_VERSION_MINOR + "." + (String)SKETCH_VERSION_RELEASE + "_" + String(ESP.getChipId(), HEX);
     upds_addr = "http://ota.voights.net/sprinkler.bin";
-    revision = 1;
   }
 
   const String hostname() const {
@@ -103,8 +102,12 @@ class SprinklerDevice {
     SprinklerConfig config;
     EEPROM.get(0, config);
     if (full_name.equals(config.full_name)) {
+      Serial.print("[EEPROM] Display Name: ");
       dispname(config.disp_name);
+      Serial.println(disp_name);
+      Serial.print("[EEPROM] Host Name: ");
       hostname(config.host_name);
+      Serial.println(host_name);
       revision = config.version;
 
       Schedule.setDuration(config.scheduler[0].duration);
@@ -147,14 +150,6 @@ class SprinklerDevice {
     strcpy(config.host_name, host_name.c_str());
     strcpy(config.disp_name, disp_name.c_str());
     EEPROM.put(0, config);
-    EEPROM.commit();
-  }
-
-  void clear() {
-    Serial.println("[EEPROM] clear");
-    for (int i = 0; i < EEPROM.length(); i++) {
-      EEPROM.write(i, 0);
-    }
     EEPROM.commit();
   }
 
