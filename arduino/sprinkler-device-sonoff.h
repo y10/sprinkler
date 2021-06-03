@@ -7,26 +7,22 @@
 
 #include "sprinkler-device.h"
 
-extern SprinklerDevice Device = SprinklerDevice([]()
-{
-    pinMode(LED_PIN, OUTPUT);
+void ICACHE_RAM_ATTR handleButtonInterrupt() {
+  if (Sprinkler.isWatering()) {
+    Sprinkler.stop();
+  } else {
+    Sprinkler.start();
+  }
+}
 
-    pinMode(BTN_PIN, INPUT);
+extern SprinklerDevice Device = SprinklerDevice([]() {
+  pinMode(LED_PIN, OUTPUT);
 
-    pinMode(RELAY_PIN, OUTPUT);
+  pinMode(RELAY_PIN, OUTPUT);
 
-    attachInterrupt(digitalPinToInterrupt(BTN_PIN), []() 
-    {
-        if (Sprinkler.isWatering())
-        {
-            Sprinkler.stop();
-        }
-        else
-        {
-            Sprinkler.start();
-        }
-    }, FALLING);
-    
+  pinMode(BTN_PIN, INPUT);
+
+  attachInterrupt(digitalPinToInterrupt(BTN_PIN), handleButtonInterrupt, FALLING);
 }, LED_PIN, RELAY_PIN);
 
 #endif

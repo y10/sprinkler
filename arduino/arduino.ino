@@ -7,7 +7,7 @@
 #include <Ticker.h>
 #include <fauxmoESP.h>
 #include "sprinkler.h"
-#include "sprinkler-device-wemos.h"
+#include "sprinkler-device-sonoff.h"
 #include "sprinkler-http.h"
 #include "sprinkler-wss.h"
 #include "sprinkler-time.h"

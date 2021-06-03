@@ -6,7 +6,7 @@
 #include <Time.h>
 #include <TimeLib.h>
 
-#define NTP_TIMEZONE 0
+#define NTP_TIMEZONE -5
 #define NTP_SERVER1 "pool.ntp.org"
 #define NTP_SERVER2 "time.nist.gov"
 #define NTP_SERVER3 "time.google.com"
