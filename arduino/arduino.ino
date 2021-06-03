@@ -15,7 +15,7 @@
 #include "includes/Files.h"
 
 Ticker ticker;
-fauxmoESP fauxmo;
+fauxmoESP Alexa;
 AsyncWebServer httpServer(80);
 AsyncWebSocket webSocket("/ws");
 AsyncWiFiManager wifiManager;
@@ -25,19 +25,18 @@ SprinklerWss wssSprinkler;
 void setup()
 {
   Serial.begin(115200);
-
-  Serial.print("\n[MAIN] Reset reason: ");
+  Serial.println();
+  Serial.print("[MAIN] Reset reason: ");
   Serial.println(ESP.getResetReason());
-
   Device.setup();
 
   ticker.attach(0.6, tick);
   setupDevice();
   setupWifi();
-  setupTime();
   setupOTA();
   setupAlexa();
   setupHttp();
+  setupTime();
   ticker.detach();
 
   Serial.println("[MAIN] System started.");
@@ -46,7 +45,7 @@ void setup()
 void loop()
 {
   ArduinoOTA.handle();
-  fauxmo.handle();
+  Alexa.handle();
   Alarm.delay(0);
 }
 
@@ -122,17 +121,17 @@ void setupAlexa()
   // Setup Alexa devices
   if (Device.dispname().length() > 0)
   {
-    fauxmo.addDevice(Device.dispname().c_str());
+    Alexa.addDevice(Device.dispname().c_str());
     Serial.print("[MAIN] Added alexa device: ");
     Serial.println(Device.dispname());
   }
 
-  fauxmo.onSet([&](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
+  Alexa.onSet([&](unsigned char device_id, const char *device_name, bool state, unsigned char value) {
     Serial.printf("[MAIN] Set Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
     state ? Sprinkler.start() : Sprinkler.stop();
   });
 
-  fauxmo.onGet([&](unsigned char device_id, const char *device_name, bool &state, unsigned char &value) {
+  Alexa.onGet([&](unsigned char device_id, const char *device_name, bool &state, unsigned char &value) {
     state = Sprinkler.isWatering();
     Serial.printf("[MAIN] Get Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
   });

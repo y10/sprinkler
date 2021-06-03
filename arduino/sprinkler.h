@@ -17,10 +17,7 @@ class SprinklerClass
 private:
 
   std::vector<Delegate> onChangeEventHandlers;
-  
   SprinklerDevice* device;
-  Delegate onAction;
-  Delegate offAction;
   
   unsigned int times;
   unsigned int duration;
@@ -102,15 +99,6 @@ public:
   void setup(SprinklerDevice& d)
   {
     d.load();
-
-    onAction = [&]() {
-      d.turnOn();
-    };
-
-    offAction = [&]() {
-      d.turnOff();
-    };
-
     device = &d;
   }
 
@@ -161,10 +149,12 @@ public:
 
   void start()
   {
+    Serial.println("Startting...");
+
      if (duration)
       countdown.once_ms(duration - 10000, std::bind(&SprinklerClass::startNextZone, this));
 
-    onAction();
+    if (device) device->turnOn();
     startTime = millis();
     pauseTime = 0;
     notify();   
@@ -181,7 +171,7 @@ public:
     {
       if (times)
       {
-        offAction();
+        if (device) device->turnOn();
         countdown.once(10, std::bind(&SprinklerClass::start, this));
       }
       else
@@ -195,7 +185,10 @@ public:
 
   void stop()
   {
-    offAction();
+    Serial.println("Stopping...");
+    
+    if (device) device->turnOff();
+
     startTime = 0;
     pauseTime = 0;
     countdown.detach();
@@ -204,7 +197,7 @@ public:
 
   void pause()
   {
-    offAction();
+    if (device) device->turnOff();
 
     pauseTime = millis();
 
@@ -213,7 +206,7 @@ public:
 
   void resume()
   {
-    onAction();
+    if (device) device->turnOn();
 
     startTime += (millis() - pauseTime);
     pauseTime = 0;

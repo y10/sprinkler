@@ -5,8 +5,9 @@
 #include <ESP8266WiFi.h>
 #include <Time.h>
 #include <TimeLib.h>
+#include <TimeAlarms.h>
 
-#define NTP_TIMEZONE -5
+#define NTP_TIMEZONE -4
 #define NTP_SERVER1 "pool.ntp.org"
 #define NTP_SERVER2 "time.nist.gov"
 #define NTP_SERVER3 "time.google.com"
@@ -18,7 +19,7 @@ class NtpClient {
     Serial.print("Built: ");
     Serial.println(builtDate(&builtDateTime));
     setSyncProvider(0);
-    configTime(60 * 60 * NTP_TIMEZONE, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
+    configTime(0, 0, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
     Serial.println("Connecting...");
     if (!sync()) {
       setTime(builtDateTime);
@@ -46,8 +47,10 @@ class NtpClient {
       time_t t = time(nullptr);
       if (t > builtDateTime) {
         Serial.println();
+        t += NTP_TIMEZONE * 60 * 60;
         setTime(t);
         Serial.println((String)day(t) + " " + (String)monthShortStr(month(t)) + " " + (String)year(t) + " " + (String)hour(t) + ":" + (String)minute(t));
+        Schedule.attach();
         return t;
       }
     }

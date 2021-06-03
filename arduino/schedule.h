@@ -146,6 +146,25 @@ public:
   {
   }
 
+  void attach() 
+  {
+    if (!Duration)
+    {
+      for (int day = (int)dowSunday; day <= (int)dowSaturday; day++)
+      {
+        ScheduleClass &skd = get((timeDayOfWeek_t)day);
+        if (skd.Duration) {
+          skd.enable();
+        }
+      }
+    }
+    else
+    {
+      disable();
+      AlarmID = Alarm.alarmRepeat(hour(Time), minute(Time), 0, OnTick);
+    }
+  }
+
   bool enable() override
   {
     for (int day = (int)dowSunday; day <= (int)dowSaturday; day++)
